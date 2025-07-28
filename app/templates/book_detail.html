@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book_title }} - Ericの书库{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0"><i class="fas fa-book me-2"></i>{{ book_title }}</h2>
+    <div>
+        <a href="{{ book_url }}" class="btn btn-outline-secondary" target="_blank">
+            <i class="fas fa-external-link-alt me-1"></i>原网站查看
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fas fa-list me-1"></i>章节列表
+    </div>
+    <div class="card-body">
+        {% if chapters %}
+        <div class="row">
+            {% for chapter in chapters %}
+            <div class="col-md-3 col-sm-4 col-6 mb-2">
+                <a href="/chapter?url={{ chapter.url|urlencode }}" class="text-decoration-none d-block p-2 rounded hover-bg">
+                    <i class="fas fa-file-alt me-1 text-muted"></i>{{ chapter.title }}
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>暂无章节信息
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if pagination %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-pager me-1"></i>分页导航
+    </div>
+    <div class="card-body">
+        <nav aria-label="Page navigation">
+            <ul class="pagination mb-0">
+                {% for page in pagination %}
+                <li class="page-item {% if page.selected %}active{% endif %}">
+                    <a class="page-link" href="{{ page.value }}">{{ page.text }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endif %}
+
+<style>
+    .hover-bg:hover {
+        background-color: #e9ecef;
+    }
+</style>
+{% endblock %}

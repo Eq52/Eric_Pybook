@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ chapter_title }} - Ericの书库{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-book-open me-2"></i>{{ chapter_title }}</span>
+        <small><i class="fas fa-bolt me-1"></i>缓存加载</small>
+    </div>
+    <div class="card-body">
+        <div class="navigation mb-4 d-flex flex-wrap gap-2">
+            {% if prev_url %}
+            <a href="/chapter?url={{ prev_url|urlencode }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>上一章
+            </a>
+            {% endif %}
+            
+            {% if info_url %}
+            <a href="/book?url={{ info_url|urlencode }}" class="btn btn-info">
+                <i class="fas fa-list me-1"></i>目录
+            </a>
+            {% endif %}
+            
+            {% if next_url %}
+            <a href="/chapter?url={{ next_url|urlencode }}" class="btn btn-secondary ms-auto">
+                下一章<i class="fas fa-arrow-right ms-1"></i>
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="content border p-4 bg-light rounded">
+            {% for paragraph in content.split('\n') %}
+                {% if paragraph.strip() %}
+                <p class="mb-3">{{ paragraph }}</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="navigation mt-4 d-flex flex-wrap gap-2">
+            {% if prev_url %}
+            <a href="/chapter?url={{ prev_url|urlencode }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>上一章
+            </a>
+            {% endif %}
+            
+            {% if info_url %}
+            <a href="/book?url={{ info_url|urlencode }}" class="btn btn-info">
+                <i class="fas fa-list me-1"></i>目录
+            </a>
+            {% endif %}
+            
+            {% if next_url %}
+            <a href="/chapter?url={{ next_url|urlencode }}" class="btn btn-secondary ms-auto">
+                下一章<i class="fas fa-arrow-right ms-1"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
