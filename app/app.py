@@ -195,7 +195,7 @@ def search():
 @app.route('/book')
 def book_detail():
     """
-    书籍详情页 - 显示章节列表
+    书籍详情页 - 显示章节列表和详细信息
     """
     book_url = request.args.get('url', '')
     if not book_url:
@@ -224,9 +224,58 @@ def book_detail():
     
     soup = BeautifulSoup(html_content, 'html.parser')
     
-    # 获取书籍标题
-    title_h2 = soup.find('h2', class_='layout-tit')
-    book_title = re.sub(r'[《》]', '', title_h2.get_text(strip=True)).replace('最新章节', '').replace('正文', '') if title_h2 else '未知书籍'
+    # 从meta标签中提取书籍详细信息
+    book_info = {}
+    
+    # 提取OG信息
+    og_title = soup.find('meta', property='og:novel:book_name')
+    if og_title and og_title.get('content'):
+        book_info['title'] = og_title['content']
+    else:
+        title_h2 = soup.find('h2', class_='layout-tit')
+        book_info['title'] = re.sub(r'[《》]', '', title_h2.get_text(strip=True)).replace('最新章节', '').replace('正文', '') if title_h2 else '未知书籍'
+    
+    og_author = soup.find('meta', property='og:novel:author')
+    if og_author and og_author.get('content'):
+        book_info['author'] = og_author['content']
+    else:
+        book_info['author'] = '未知作者'
+    
+    og_category = soup.find('meta', property='og:novel:category')
+    if og_category and og_category.get('content'):
+        book_info['category'] = og_category['content']
+    else:
+        book_info['category'] = '未知分类'
+    
+    og_status = soup.find('meta', property='og:novel:status')
+    if og_status and og_status.get('content'):
+        book_info['status'] = og_status['content']
+    else:
+        book_info['status'] = '未知状态'
+    
+    og_update_time = soup.find('meta', property='og:novel:update_time')
+    if og_update_time and og_update_time.get('content'):
+        book_info['update_time'] = og_update_time['content']
+    else:
+        book_info['update_time'] = '未知更新时间'
+    
+    og_lastest_chapter = soup.find('meta', property='og:novel:lastest_chapter_name')
+    if og_lastest_chapter and og_lastest_chapter.get('content'):
+        book_info['lastest_chapter'] = og_lastest_chapter['content']
+    else:
+        book_info['lastest_chapter'] = '无最新章节信息'
+    
+    og_description = soup.find('meta', property='og:description')
+    if og_description and og_description.get('content'):
+        book_info['description'] = og_description['content']
+    else:
+        book_info['description'] = '暂无书籍简介'
+    
+    og_image = soup.find('meta', property='og:image')
+    if og_image and og_image.get('content'):
+        book_info['cover'] = og_image['content']
+    else:
+        book_info['cover'] = ''
     
     # 获取章节列表
     chapters = []
@@ -276,7 +325,7 @@ def book_detail():
                 })
     
     return render_template('book_detail.html', 
-                         book_title=book_title,
+                         book_info=book_info,
                          chapters=chapters,
                          pagination=pagination,
                          book_url=full_book_url)

@@ -1,14 +1,50 @@
 {% extends "base.html" %}
 
-{% block title %}{{ book_title }} - Ericの书库{% endblock %}
+{% block title %}{{ book_info.title }} - Ericの书库{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0"><i class="fas fa-book me-2"></i>{{ book_title }}</h2>
-    <div>
-        <a href="{{ book_url }}" class="btn btn-outline-secondary" target="_blank">
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h2 class="mb-0"><i class="fas fa-book me-2"></i>{{ book_info.title }}</h2>
+        <a href="{{ book_url }}" class="btn btn-light" target="_blank">
             <i class="fas fa-external-link-alt me-1"></i>原网站查看
         </a>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 text-center mb-3">
+                {% if book_info.cover %}
+                <img src="{{ book_info.cover }}" alt="{{ book_info.title }}" class="img-fluid rounded border">
+                {% else %}
+                <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                    <i class="fas fa-book fa-3x text-muted"></i>
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-9">
+                <div class="row mb-2">
+                    <div class="col-md-6 mb-2">
+                        <p class="mb-1"><strong><i class="fas fa-user me-2"></i>作者:</strong> {{ book_info.author }}</p>
+                        <p class="mb-1"><strong><i class="fas fa-tag me-2"></i>分类:</strong> 
+                            <span class="badge bg-secondary">{{ book_info.category }}</span>
+                        </p>
+                        <p class="mb-1"><strong><i class="fas fa-sync-alt me-2"></i>状态:</strong> 
+                            <span class="badge bg-{% if book_info.status == '连载' %}success{% else %}info{% endif %}">
+                                {{ book_info.status }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong><i class="fas fa-clock me-2"></i>更新时间:</strong> {{ book_info.update_time }}</p>
+                        <p class="mb-1"><strong><i class="fas fa-history me-2"></i>最新章节:</strong> {{ book_info.lastest_chapter }}</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <p class="mb-1"><strong><i class="fas fa-info-circle me-2"></i>简介:</strong></p>
+                    <p class="text-muted">{{ book_info.description }}</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
