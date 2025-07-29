@@ -6,56 +6,149 @@
 <div class="card mb-4">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
         <span><i class="fas fa-book-open me-2"></i>{{ chapter_title }}</span>
-        <small><i class="fas fa-bolt me-1"></i>缓存加载</small>
+        <div>
+            <button id="toggleLightBtn" class="btn btn-sm btn-light me-2">
+                <i class="fas fa-lightbulb me-1"></i>关灯
+            </button>
+            <small><i class="fas fa-bolt me-1"></i>缓存加载</small>
+        </div>
     </div>
     <div class="card-body">
-        <div class="navigation mb-4 d-flex flex-wrap gap-2">
-            {% if prev_url %}
-            <a href="/chapter?url={{ prev_url|urlencode }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i>上一章
-            </a>
-            {% endif %}
-            
-            {% if info_url %}
-            <a href="/book?url={{ info_url|urlencode }}" class="btn btn-info">
-                <i class="fas fa-list me-1"></i>目录
-            </a>
-            {% endif %}
-            
-            {% if next_url %}
-            <a href="/chapter?url={{ next_url|urlencode }}" class="btn btn-secondary ms-auto">
-                下一章<i class="fas fa-arrow-right ms-1"></i>
-            </a>
-            {% endif %}
+        <!-- 添加加载动画 -->
+        <div id="loadingIndicator" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-2">内容加载中，请稍候...</p>
         </div>
-
-        <div class="content border p-4 bg-light rounded">
-            {% for paragraph in content.split('\n') %}
-                {% if paragraph.strip() %}
-                <p class="mb-3">{{ paragraph }}</p>
+        
+        <div id="chapterContainer" style="display: none;">
+            <div class="navigation mb-4 d-flex flex-wrap gap-2">
+                {% if prev_url %}
+                <a href="/chapter?url={{ prev_url|urlencode }}{% if book_url %}&book_url={{ book_url|urlencode }}{% endif %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>上一章
+                </a>
                 {% endif %}
-            {% endfor %}
-        </div>
+                
+                {% if info_url %}
+                <a href="/book?url={{ info_url|urlencode }}" class="btn btn-info">
+                    <i class="fas fa-list me-1"></i>目录
+                </a>
+                {% endif %}
+                
+                {% if next_url %}
+                <a href="/chapter?url={{ next_url|urlencode }}{% if book_url %}&book_url={{ book_url|urlencode }}{% endif %}" class="btn btn-secondary ms-auto">
+                    下一章<i class="fas fa-arrow-right ms-1"></i>
+                </a>
+                {% endif %}
+            </div>
 
-        <div class="navigation mt-4 d-flex flex-wrap gap-2">
-            {% if prev_url %}
-            <a href="/chapter?url={{ prev_url|urlencode }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i>上一章
-            </a>
-            {% endif %}
-            
-            {% if info_url %}
-            <a href="/book?url={{ info_url|urlencode }}" class="btn btn-info">
-                <i class="fas fa-list me-1"></i>目录
-            </a>
-            {% endif %}
-            
-            {% if next_url %}
-            <a href="/chapter?url={{ next_url|urlencode }}" class="btn btn-secondary ms-auto">
-                下一章<i class="fas fa-arrow-right ms-1"></i>
-            </a>
-            {% endif %}
+            <div id="chapterContent" class="content border p-4 rounded">
+                {% for paragraph in content.split('\n') %}
+                    {% if paragraph.strip() %}
+                    <p class="mb-3">{{ paragraph }}</p>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="navigation mt-4 d-flex flex-wrap gap-2">
+                {% if prev_url %}
+                <a href="/chapter?url={{ prev_url|urlencode }}{% if book_url %}&book_url={{ book_url|urlencode }}{% endif %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>上一章
+                </a>
+                {% endif %}
+                
+                {% if info_url %}
+                <a href="/book?url={{ info_url|urlencode }}" class="btn btn-info">
+                    <i class="fas fa-list me-1"></i>目录
+                </a>
+                {% endif %}
+                
+                {% if next_url %}
+                <a href="/chapter?url={{ next_url|urlencode }}{% if book_url %}&book_url={{ book_url|urlencode }}{% endif %}" class="btn btn-secondary ms-auto">
+                    下一章<i class="fas fa-arrow-right ms-1"></i>
+                </a>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 获取URL参数
+    function getUrlParameter(name) {
+        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+        var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+        var results = regex.exec(window.location.href);
+        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+    
+    // 开关灯功能
+    let isLightsOn = true;
+    
+    function toggleLight() {
+        isLightsOn = !isLightsOn;
+        const body = document.body;
+        const card = document.querySelector('.card');
+        const content = document.getElementById('chapterContent');
+        const toggleBtn = document.getElementById('toggleLightBtn');
+        
+        if (isLightsOn) {
+            // 开灯模式
+            body.style.backgroundColor = '#f8f9fa';
+            card.style.backgroundColor = 'white';
+            content.style.backgroundColor = '#f8f9fa';
+            content.style.color = 'black';
+            toggleBtn.innerHTML = '<i class="fas fa-lightbulb me-1"></i>关灯';
+            toggleBtn.className = 'btn btn-sm btn-light me-2';
+        } else {
+            // 关灯模式
+            body.style.backgroundColor = '#1a1a1a';
+            card.style.backgroundColor = '#2d2d2d';
+            content.style.backgroundColor = '#1a1a1a';
+            content.style.color = '#e0e0e0';
+            toggleBtn.innerHTML = '<i class="fas fa-lightbulb me-1"></i>开灯';
+            toggleBtn.className = 'btn btn-sm btn-dark me-2';
+        }
+    }
+    
+    // 绑定开关灯按钮事件
+    document.getElementById('toggleLightBtn').addEventListener('click', toggleLight);
+    
+    // 页面加载完成后隐藏加载动画并显示内容
+    document.addEventListener('DOMContentLoaded', function() {
+        // 隐藏加载动画
+        document.getElementById('loadingIndicator').style.display = 'none';
+        // 显示章节内容
+        document.getElementById('chapterContainer').style.display = 'block';
+        
+        // 自动保存阅读进度
+        const bookUrl = getUrlParameter('book_url');
+        const chapterUrl = getUrlParameter('url');
+        const chapterTitle = document.querySelector('.card-header span').textContent
+            .replace('', '').trim(); // 移除图标字符
+        
+        // 保存阅读进度到浏览器缓存（所有用户都可以使用）
+        if (chapterUrl) {
+            // 保存到localStorage
+            const progress = {
+                book_url: bookUrl,
+                book_title: document.title.replace(' - Ericの书库', ''),
+                chapter_url: chapterUrl,
+                chapter_title: chapterTitle,
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem('reading_progress_' + bookUrl, JSON.stringify(progress));
+            console.log('阅读进度已保存到浏览器缓存');
+        }
+        
+        // 如果是本地用户，也尝试保存到服务端
+        if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+            console.log('本地用户，可以保存到服务端');
+        }
+    });
+</script>
 {% endblock %}

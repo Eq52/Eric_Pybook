@@ -39,9 +39,70 @@
             padding: 20px 0;
             background-color: #f1f1f1;
         }
+        .dark-mode {
+            background-color: #1a1a1a !important;
+            color: #e0e0e0;
+        }
+        .dark-mode .card {
+            background-color: #2d2d2d !important;
+            color: #e0e0e0;
+        }
+        .dark-mode .navbar {
+            background-color: #222 !important;
+        }
+        .dark-mode a {
+            color: #66b3ff !important;
+        }
+        .dark-mode a:hover {
+            color: #99ccff !important;
+        }
+        /* 加载动画样式 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+        .dark-mode .loading-overlay {
+            background-color: rgba(26, 26, 26, 0.8);
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(0, 123, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #007bff;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            margin-top: 15px;
+            font-size: 18px;
+            color: #333;
+        }
+        .dark-mode .loading-text {
+            color: #e0e0e0;
+        }
     </style>
 </head>
 <body>
+    <!-- 全局加载动画 -->
+    <div id="globalLoading" class="loading-overlay" style="display: none;">
+        <div class="text-center">
+            <div class="spinner"></div>
+            <div class="loading-text">加载中，请稍候...</div>
+        </div>
+    </div>
+
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="/">
@@ -64,9 +125,6 @@
                         </button>
                     </div>
                 </form>
-                <button id="clearCacheBtn" class="btn btn-outline-light">
-                    <i class="fas fa-trash-alt me-1"></i>清空服务端缓存
-                </button>
             </div>
         </div>
     </nav>
@@ -78,51 +136,116 @@
     <footer class="bg-light text-center text-muted">
         <div class="container">
             <p class="mb-0 py-3">© 2025 Eric の 书库 - 仅供学习交流使用</p>
-            <div class="mb-3">
-                <button id="clearBrowserCacheBtn" class="btn btn-sm btn-outline-secondary">
-                    <i class="fas fa-trash-alt me-1"></i>清空浏览器缓存
-                </button>
-            </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdmirror.com/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 清空服务端缓存功能
+        // 检查是否是本地访问，如果是则显示书签链接
+        if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+            document.getElementById('bookmarksLink').style.display = 'block';
+        }
+        
+        // 显示全局加载动画
+        function showGlobalLoading() {
+            document.getElementById('globalLoading').style.display = 'flex';
+        }
+        
+        // 隐藏全局加载动画
+        function hideGlobalLoading() {
+            document.getElementById('globalLoading').style.display = 'none';
+        }
+        
+        // 页面加载完成后隐藏加载动画
+        window.addEventListener('load', function() {
+            hideGlobalLoading();
+        });
+        
+        // 在页面跳转前显示加载动画
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && link.href && !link.target && !e.ctrlKey && !e.metaKey) {
+                // 检查是否是内部链接
+                const url = new URL(link.href, window.location.origin);
+                if (url.origin === window.location.origin) {
+                    showGlobalLoading();
+                }
+            }
+        });
+        
+        // 清空服务端缓存功能 - 仅限本地用户
         document.getElementById('clearCacheBtn').addEventListener('click', function() {
-            if (confirm('确定要清空所有服务端缓存吗？这将影响所有用户。')) {
+            // 检查是否是本地访问
+            if (window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
+                showAlert('只有本地用户才能清空服务端缓存', 'danger');
+                return;
+            }
+            
+            if (confirm('确定要清空服务端缓存吗？这将影响所有用户。')) {
+                // 添加加载提示
+                const btn = this;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>处理中...';
+                btn.disabled = true;
+                
                 fetch('/clear_cache')
                     .then(response => response.json())
                     .then(data => {
                         if (data.status === 'success') {
-                            alert('服务端缓存已清空');
+                            showAlert('服务端缓存已清空', 'success');
+                        } else {
+                            showAlert('清空缓存失败: ' + data.message, 'danger');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('清空服务端缓存失败');
+                        showAlert('清空缓存时发生错误', 'danger');
+                    })
+                    .finally(() => {
+                        // 恢复按钮状态
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
                     });
             }
         });
         
-        // 清空浏览器缓存功能
+        // 显示带样式的提示信息
+        function showAlert(message, type) {
+            // 创建alert元素
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x m-3`;
+            alert.role = 'alert';
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            // 添加到页面
+            document.body.appendChild(alert);
+            
+            // 自动关闭
+            setTimeout(() => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 5000);
+        }
+
+        // 清空浏览器缓存
         document.getElementById('clearBrowserCacheBtn').addEventListener('click', function() {
-            if (confirm('确定要清空浏览器缓存吗？这只会清除您本地的缓存。')) {
-                // 实际清除浏览器缓存
-                if ('caches' in window) {
-                    caches.keys().then(names => {
-                        for (let name of names) {
-                            caches.delete(name);
-                        }
-                    }).then(() => {
-                        alert('浏览器缓存已清空');
-                    });
-                } else {
-                    alert('浏览器不支持缓存API');
-                }
+            if (confirm('确定要清空浏览器缓存吗？这将删除您的所有本地书签和阅读进度。')) {
+                // 清空localStorage
+                localStorage.clear();
+                // 清空sessionStorage
+                sessionStorage.clear();
+                // 清空cookies
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                showAlert('浏览器缓存已清空', 'success');
             }
         });
     </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>

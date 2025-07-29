@@ -198,22 +198,33 @@ def book_detail():
     书籍详情页 - 显示章节列表和详细信息
     """
     book_url = request.args.get('url', '')
-    if not book_url:
+    page_url = request.args.get('page_url', '')  # 支持直接指定分页URL
+    source = request.args.get('source', '')  # 书籍来源
+    custom_url = request.args.get('custom_url', '')  # 自定义基础URL
+    
+    if not book_url and not page_url:
         return "无效的书籍链接"
     
-    # 判断书籍来源网站，使用对应的BASE_URL
-    if "lkyuedu.com" in book_url:
+    # 确定使用的基础URL
+    if custom_url:
+        site_base_url = custom_url
+    elif "lkyuedu.com" in (book_url or page_url):
         site_base_url = "https://www.lkyuedu.com"
     else:
         site_base_url = BASE_URL
     
-    # 处理相对路径URL
-    if book_url.startswith('/'):
-        full_book_url = site_base_url + book_url
-    elif not book_url.startswith('http'):
-        full_book_url = site_base_url + '/' + book_url
+    # 确定实际请求的URL
+    if page_url:
+        # 如果提供了page_url，直接使用
+        full_book_url = page_url
     else:
-        full_book_url = book_url
+        # 处理相对路径URL
+        if book_url.startswith('/'):
+            full_book_url = site_base_url + book_url
+        elif not book_url.startswith('http'):
+            full_book_url = site_base_url + '/' + book_url
+        else:
+            full_book_url = book_url
     
     # 使用线程池执行耗时操作
     future = executor.submit(fetch_page, full_book_url)
@@ -279,10 +290,69 @@ def book_detail():
     
     # 获取章节列表
     chapters = []
+    
+    # 查找所有章节列表容器，但排除"最新章节"部分
     section_boxes = soup.find_all('div', class_='section-box')
     
+    # 过滤掉"最新章节"部分，只保留正文部分
+    filtered_boxes = []
     for box in section_boxes:
-        ul_list = box.find('ul', class_='section-list')
+        # 查找父容器中的标题
+        parent = box.parent
+        layout_tit = parent.find('h2', class_='layout-tit') if parent else None
+        if layout_tit and '最新章节' in layout_tit.get_text():
+            # 跳过"最新章节"部分
+            continue
+        else:
+            # 保留其他部分（如正文）
+            filtered_boxes.append(box)
+    
+    # 如果没有找到非最新章节的section-box，回退到原来的逻辑
+    if not filtered_boxes and section_boxes:
+        filtered_boxes = section_boxes
+    
+    # 如果仍然没有找到标准的section-box，尝试查找其他可能的章节容器
+    if not filtered_boxes:
+        # 查找所有ul标签中class包含section-list的
+        section_lists = soup.find_all('ul', class_=re.compile(r'section-list'))
+        if section_lists:
+            # 过滤掉"最新章节"部分的列表
+            filtered_lists = []
+            for ul in section_lists:
+                # 查找父容器中的标题
+                parent_row = None
+                current = ul
+                # 向上查找包含标题的父容器
+                while current and current.parent:
+                    if current.parent.find('h2', class_='layout-tit'):
+                        parent_row = current.parent
+                        break
+                    current = current.parent
+                
+                layout_tit = parent_row.find('h2', class_='layout-tit') if parent_row else None
+                if layout_tit and '最新章节' in layout_tit.get_text():
+                    # 跳过"最新章节"部分
+                    continue
+                # 新增过滤条件：排除包含"如来大世尊"等异常章节的列表
+                if ul.find('a', string=re.compile(r'如来大世尊|异世佛门|佛国|公孙轩辕')):
+                    continue
+                
+                filtered_lists.append(ul)
+            
+            # 如果过滤后没有列表，但原始列表存在，则回退到原始列表
+            if not filtered_lists and section_lists:
+                filtered_lists = section_lists
+                
+            filtered_boxes = [{'ul': ul} for ul in filtered_lists]
+    
+    for box in filtered_boxes:
+        # 如果是div.section-box
+        if hasattr(box, 'find'):
+            ul_list = box.find('ul', class_='section-list')
+        # 如果是模拟的字典结构
+        else:
+            ul_list = box.get('ul')
+            
         if ul_list:
             for li in ul_list.find_all('li'):
                 a_tag = li.find('a')
@@ -304,9 +374,11 @@ def book_detail():
     
     # 获取分页信息
     pagination = []
-    index_container = soup.find('div', class_='index-container')
-    if index_container:
-        select = index_container.find('select', id='indexselect')
+    # 查找分页容器，支持多种class
+    index_containers = soup.find_all('div', class_=re.compile(r'index-container'))
+    
+    for index_container in index_containers:
+        select = index_container.find('select', id=re.compile(r'indexselect'))
         if select:
             for option in select.find_all('option'):
                 option_value = option['value']
@@ -318,11 +390,59 @@ def book_detail():
                 else:
                     full_option_url = option_value
                 
+                # 构建内部路由URL，而不是直接使用外部网站URL
+                from urllib.parse import urlencode
+                internal_params = {
+                    'page_url': full_option_url,
+                    'source': source if source else ('lkyuedu' if 'lkyuedu.com' in full_option_url else 'kanshulao')
+                }
+                if custom_url:
+                    internal_params['custom_url'] = custom_url
+                
+                # 构建内部路由URL
+                internal_url = '/book?' + urlencode(internal_params)
+                
                 pagination.append({
                     'text': option.get_text(strip=True),
-                    'value': full_option_url,
+                    'value': internal_url,  # 使用内部路由URL
                     'selected': 'selected' in option.attrs
                 })
+            break  # 只处理第一个找到的分页控件
+    
+    # 如果没有找到select分页，检查是否有其他分页链接
+    if not pagination:
+        # 查找其他可能的分页元素
+        pagination_div = soup.find('div', class_=re.compile(r'pagination|pages'))
+        if pagination_div:
+            links = pagination_div.find_all('a')
+            for link in links:
+                href = link.get('href')
+                text = link.get_text(strip=True)
+                if href and text:
+                    # 处理分页链接的相对路径
+                    if href.startswith('/'):
+                        full_href = site_base_url + href
+                    elif not href.startswith('http'):
+                        full_href = site_base_url + '/' + href
+                    else:
+                        full_href = href
+                    
+                    # 构建内部路由URL
+                    internal_params = {
+                        'page_url': full_href,
+                        'source': source if source else ('lkyuedu' if 'lkyuedu.com' in full_href else 'kanshulao')
+                    }
+                    if custom_url:
+                        internal_params['custom_url'] = custom_url
+                    
+                    # 构建内部路由URL
+                    internal_url = '/book?' + urlencode(internal_params)
+                    
+                    pagination.append({
+                        'text': text,
+                        'value': internal_url,  # 使用内部路由URL
+                        'selected': 'class' in link.attrs and 'current' in link['class']
+                    })
     
     return render_template('book_detail.html', 
                          book_info=book_info,
@@ -336,6 +456,7 @@ def chapter():
     章节阅读页
     """
     chapter_url = request.args.get('url', '')
+    book_url = request.args.get('book_url', '')  # 获取书籍URL参数
     if not chapter_url:
         return "无效的章节链接"
     
@@ -420,7 +541,8 @@ def chapter():
                          content=content,
                          prev_url=prev_url,
                          next_url=next_url,
-                         info_url=info_url)
+                         info_url=info_url,
+                         book_url=book_url)  # 传递书籍URL参数到模板
 
 @app.route('/clear_cache')
 def clear_cache_route():
